@@ -2,6 +2,8 @@
 
 This repository contains a PyTorch implementation of the Vector Quantized Variational Autoencoder (VQ-VAE) network.
 
+![vq-vae network](./assets/vq-vae.png)
+
 ## Introduction
 
 VQ-VAE (Vector Quantized Variational Autoencoder) is a type of generative model that combines ideas from vector quantization and variational autoencoders. It was introduced in the paper "Neural Discrete Representation Learning" by van den Oord et al. This implementation aims to provide a flexible and efficient PyTorch version of the VQ-VAE architecture.
