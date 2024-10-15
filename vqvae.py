@@ -77,3 +77,123 @@ class VectorQuantizeEMA(nn.Module):
 
         # Convert shape back to BCHW
         return loss, z_q.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
+
+class Residual(nn.Module):
+    '''
+    Residual Convolutional Layer
+    '''
+    def __init__(self, in_channels, num_hiddens, num_residual_hiddens):
+        super(Residual, self).__init__()
+        self._block = nn.Sequential(
+            nn.ReLU(True),
+            # C: 3 -> residual hidden
+            nn.Conv2d(in_channels=in_channels,
+                      out_channels=num_residual_hiddens,
+                      kernel_size=3, stride=1, padding=1, bias=False),
+            nn.ReLU(True),
+            # C: resiual hidden -> out_hidden
+            nn.Conv2d(in_channels=num_residual_hiddens,
+                      out_channels=num_hiddens,
+                      kernel_size=1, stride=1, bias=False)
+        )
+
+    def forward(self, x):
+        return x + self._block(x) # residual output
+
+
+class ResidualStack(nn.Module):
+    '''
+    Residual Convolution Stack
+    '''
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
+        super(ResidualStack, self).__init__()
+        self._num_residual_layers = num_residual_layers
+        self._layers = nn.ModuleList([Residual(in_channels, num_hiddens, num_residual_hiddens)
+                             for _ in range(self._num_residual_layers)])
+
+    def forward(self, x):
+        # Apply all residual layers in stack
+        for i in range(self._num_residual_layers):
+            x = self._layers[i](x)
+        return F.relu(x)
+
+class Encoder(nn.Module):
+    '''
+    Convolutional Encoder
+    '''
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
+        super(Encoder, self).__init__()
+
+        self._conv1 = nn.Conv2d(in_channels=in_channels, out_channels=num_hiddens//2,
+                                 kernel_size=4,
+                                 stride=2, padding=1)
+
+        self._conv2 = nn.Conv2d(in_channels=num_hiddens//2, out_channels=num_hiddens,
+                                 kernel_size=4,
+                                 stride=2, padding=1)
+
+        self._conv3 = nn.Conv2d(in_channels=num_hiddens, out_channels=num_hiddens,
+                                 kernel_size=3,
+                                 stride=1, padding=1)
+
+        self._residual_stack = ResidualStack(in_channels=num_hiddens,
+                                             num_hiddens=num_hiddens,
+                                             num_residual_layers=num_residual_layers,
+                                             num_residual_hiddens=num_residual_hiddens)
+
+    def forward(self, inputs):
+        x = self._conv1(inputs)
+        x = F.relu(x)
+        x = self._conv2(x)
+        x = F.relu(x)
+        x = self._conv3(x)
+        return self._residual_stack(x)
+
+class Decoder(nn.Module):
+    '''
+    Convolutional Decoder
+    '''
+    def __init__(self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens):
+        super(Decoder, self).__init__()
+
+        self._conv1 = nn.Conv2d(in_channels=in_channels, out_channels=num_hiddens,
+                                kernel_size=3, stride=1, padding=1)
+        self._residual_stack = ResidualStack(in_channels=num_hiddens, num_hiddens=num_hiddens,
+                                             num_residual_layers=num_residual_layers,
+                                             num_residual_hiddens=num_residual_hiddens)
+        self._conv_trans_1 = nn.ConvTranspose2d(in_channels=num_hiddens,
+                                                out_channels=num_hiddens // 2,
+                                                kernel_size=4, stride=2, padding=1)
+        self._conv_trans_2 = nn.ConvTranspose2d(in_channels=num_hiddens // 2,
+                                                out_channels=3,
+                                                kernel_size=4, stride=2, padding=1)
+
+    def forward(self, inputs):
+        x = self._conv1(inputs)
+        x = self._residual_stack(x)
+        x = self._conv_trans_1(x)
+        x = F.relu(x)
+        return self._conv_trans_2(x)
+
+class VQVAE(nn.Module):
+    '''
+    VQ-VAE Network
+    Contains: Encoder, Quantizer, Decoder
+    '''
+    def __init__(self, num_hiddens, num_residual_layers, num_residual_hiddens,
+                 num_embeddings, embedding_dim, commitment_cost, decay):
+        super(VQVAE, self).__init__()
+
+        self._encoder = Encoder(3, num_hiddens, num_residual_layers, num_residual_hiddens)
+        self._pre_vq_conv = nn.Conv2d(in_channels=num_hiddens, out_channels=embedding_dim,
+                                      kernel_size=1, stride=1)
+
+        self._vq = VectorQuantizerEMA(num_embeddings, embedding_dim, commitment_cost, decay)
+        self._decoder = Decoder(embedding_dim, num_hiddens, num_residual_layers, num_residual_hiddens)
+
+    def forward(self, x):
+        z = self._encoder(x) # encode image to latent
+        z = self._pre_vq_conv(z)
+        loss, quantized, perplexity, _ = self._vq(z) # quantize encoding to dicrete space
+        x_recon = self._decoder(quantized) # reconstruction of input from decoder
+        return loss, x_recon, perplexity
