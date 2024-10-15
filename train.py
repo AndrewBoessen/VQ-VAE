@@ -79,7 +79,10 @@ def main():
 
     # VQ-VAE Model
     model = VQVAE(config.architecture.num_hiddens, config.architecture.num_residual_layers, config.architecture.num_residual_hiddens,
-                  config.architecture.num_embeddings, config.architecture.embedding_dim, config.training.commitment_const, config.training.decay).to(device)
+                  config.architecture.num_embeddings, config.architecture.embedding_dim, config.training.commitment_cost, config.training.decay).to(device)
+
+    optimizer = optim.Adam(params=model.parameters(),
+                           lr=config.training.learning_rate, amsgrad=False)
 
 
 if __name__ == "__main__":
