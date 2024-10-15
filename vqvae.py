@@ -9,7 +9,6 @@ class VectorQuantizeEMA(nn.Module):
     '''
     Exponential Moving Average (EMA) vector quantization for VQ-VAE model
     '''
-
     def __init__(self, n_embeddings, embedding_dim, commitment_cost, decay, epsilon=1e-5):
         super(VectorQuantizeEMA, self).__init__()
 
@@ -28,7 +27,7 @@ class VectorQuantizeEMA(nn.Module):
         self._decay = decay
         self.epsilon = epsilon
 
-    def formward(self, z_e):
+    def forward(self, z_e):
         # reshape from BCHW -> BHWC
         z_e = z_e.permute(0, 2, 3, 1).contiguous()
         shape = z_e.shape
@@ -42,10 +41,10 @@ class VectorQuantizeEMA(nn.Module):
                      + torch.sum(self._embedding.weight**2,)
                      - 2 * torch.matmul(flat_z_e, self._embedding.weight.t())
                     )
-        
+
         # Encoding
         encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
-        encodings = torch.zeros(encoding_indices.shape[0], self._n_embeddings, device=inputs.device)
+        encodings = torch.zeros(encoding_indices.shape[0], self._n_embeddings, device=z_e.device)
         encodings.scatter_(1, encoding_indices, 1) # Convert to shape of embeddings
 
         # Quantize and Unflatten
@@ -194,6 +193,6 @@ class VQVAE(nn.Module):
     def forward(self, x):
         z = self._encoder(x) # encode image to latent
         z = self._pre_vq_conv(z)
-        loss, quantized, perplexity, _ = self._vq(z) # quantize encoding to dicrete space
-        x_recon = self._decoder(quantized) # reconstruction of input from decoder
+        loss, z_q, perplexity, _ = self._vq(z) # quantize encoding to dicrete space
+        x_recon = self._decoder(z_q) # reconstruction of input from decoder
         return loss, x_recon, perplexity
