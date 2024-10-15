@@ -1,15 +1,16 @@
 import os
 from datetime import datetime
+from types import SimpleNamespace
 
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import tqdm
 import yaml
-from torch.utils.tensorboard import SummaryWriter
-import torch.optim as optim
+from sklearn.cluster import KMeans
 from torch.utils.data import DataLoader, random_split
-from types import SimpleNamespace
+from torch.utils.tensorboard import SummaryWriter
 
 from vqvae import VQVAE
 
@@ -34,7 +35,7 @@ def read_config(file_path):
                 batch_size=model_config["batch_size"],
                 num_training_updates=model_config["num_training_updates"],
                 architecture=architecture,
-                training=training
+                training=training,
             )
         except yaml.YAMLError as e:
             print(f"Error reading the YAML file: {e}")
@@ -70,19 +71,100 @@ def main():
     print(f"Test Data: {len(test_data)}")
     data_variance = np.var(data[train_data.indices])
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # DataLoaders
     training_loader = DataLoader(
-        train_data, batch_size=config.architecture.num_hiddens, shuffle=True, pin_memory=True)
+        train_data,
+        batch_size=config.architecture.num_hiddens,
+        shuffle=True,
+        pin_memory=True,
+    )
     validataion_loader = DataLoader(
-        test_data, batch_size=32, shuffle=True, pin_memory=True)
+        test_data, batch_size=32, shuffle=True, pin_memory=True
+    )
 
     # VQ-VAE Model
-    model = VQVAE(config.architecture.num_hiddens, config.architecture.num_residual_layers, config.architecture.num_residual_hiddens,
-                  config.architecture.num_embeddings, config.architecture.embedding_dim, config.training.commitment_cost, config.training.decay).to(device)
+    model = VQVAE(
+        config.architecture.num_hiddens,
+        config.architecture.num_residual_layers,
+        config.architecture.num_residual_hiddens,
+        config.architecture.num_embeddings,
+        config.architecture.embedding_dim,
+        config.training.commitment_cost,
+        config.training.decay,
+    ).to(device)
 
-    optimizer = optim.Adam(params=model.parameters(),
-                           lr=config.training.learning_rate, amsgrad=False)
+    optimizer = optim.Adam(
+        params=model.parameters(), lr=config.training.learning_rate, amsgrad=False
+    )
+
+    # TensorBoard setup
+    current_time = datetime.now().strftime("%b%d_%H-%M-%S")
+    log_dir = os.path.join("runs", current_time)
+    writer = SummaryWriter(log_dir)
+
+    # Training Loop
+    for i in tqdm(range(config.num_training_updates)):
+        data = next(iter(train_data))  # current batch of data
+        data = data.to(device)
+        data = data.permute(0, 3, 1, 2).contiguous()
+
+        optimizer.zero_grad()
+
+        if i == config.training.pretrain_steps:
+            # K Means Cluster to initialize discrete embeddings
+            with torch.no_grad():
+                embeddings = model.encode(train_data)
+
+            embeddings.permute(0, 2, 3, 1).contiguous().reshape(
+                -1, config.architecture.embedding_dim
+            )
+
+            np_e = embeddings.cpu().numpy()
+
+            n_clusters = config.architecture.num_embeddings
+            kmeans = KMeans(n_clusters)
+            kmeans.fit(np_e)
+
+            cluster_centers = torch.from_numpy(kmeans.cluster_centers_).to(device)
+
+            model.set_embeddings(cluster_centers)
+
+        # Pretrain without vector quantizer
+        if i < config.training.pretrain_steps:
+            data_recon = model.pretrain(data)
+            loss = nn.functional.mse_loss(data_recon, data) / data_variance
+        else:
+            vq_loss, data_recon, perplexity = model(data)
+            recon_error = nn.functional.mse_loss(data_recon, data) / data_variance
+            loss = recon_error + vq_loss
+
+        loss.backward()
+        optimizer.step()
+
+        # Log to TensorBoard
+        writer.add_scalar("Loss/train", loss.item(), i)
+        writer.add_scalar("VQ Loss", vq_loss.item(), i)
+        writer.add_scalar("Reconstruction Error", recon_error.item(), i)
+        writer.add_scalar("Perplexity", perplexity.item(), i)
+
+        # Save model checkpoint every 1000 updates
+        if (i + 1) % 1000 == 0:
+            checkpoint_path = os.path.join("checkpoints", f"model_checkpoint_{i+1}.pth")
+            os.makedirs("checkpoints", exist_ok=True)
+            torch.save(
+                {
+                    "epoch": i + 1,
+                    "model_state_dict": model.state_dict(),
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "loss": loss,
+                },
+                checkpoint_path,
+            )
+            print(f"Checkpoint saved at {checkpoint_path}")
+
+    writer.close()
+    print("Training completed.")
 
 
 if __name__ == "__main__":

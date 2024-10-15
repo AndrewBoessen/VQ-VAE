@@ -98,8 +98,7 @@ class VectorQuantizeEMA(nn.Module):
         # Straight Through Loss
         z_q = z_e + (z_q - z_e).detach()
         avg_probs = torch.mean(encodings, dim=0)
-        perplexity = torch.exp(-torch.sum(avg_probs *
-                               torch.log(avg_probs + 1e-10)))
+        perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
 
         # Convert shape back to BCHW
         return loss, z_q.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
@@ -289,6 +288,22 @@ class VQVAE(nn.Module):
         self._decoder = Decoder(
             embedding_dim, num_hiddens, num_residual_layers, num_residual_hiddens
         )
+
+    def set_embeddings(self, new_embeddings):
+        assert new_embeddings.shape == self._vq._embedding.shape
+        with torch.no_grad():
+            self._vq._embedding.weight.copy_(new_embeddings)
+
+    def encode(self, x):
+        z = self._encoder(x)
+        z_e = self._pre_vq_conv(z)
+        return z_e
+
+    def pretrain(self, x):
+        z = self._encoder(x)
+        z = self._pre_vq_conv(z)
+        x_recon = self._decoder(z)
+        return x_recon
 
     def forward(self, x):
         z = self._encoder(x)  # encode image to latent
