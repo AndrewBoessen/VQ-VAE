@@ -27,10 +27,10 @@ class VectorQuantizeEMA(nn.Module):
         self.register_buffer(
             "_ema_cluster_size", torch.zeros(n_embeddings)
         )  # Clusters for EMA
-        self._ema_w = nn.Parameters(
+        self._ema_w = nn.Parameter(
             torch.Tensor(n_embeddings, self._embedding_dim)
         )  # EMA weights
-        self._ema_w.data.normal()
+        self._ema_w.data.normal_()
 
         # Loss / Training Parameters
         self._commitment_cost = commitment_cost
@@ -60,7 +60,8 @@ class VectorQuantizeEMA(nn.Module):
         encodings = torch.zeros(
             encoding_indices.shape[0], self._n_embeddings, device=z_e.device
         )
-        encodings.scatter_(1, encoding_indices, 1)  # Convert to shape of embeddings
+        # Convert to shape of embeddings
+        encodings.scatter_(1, encoding_indices, 1)
 
         # Quantize and Unflatten
         z_q = torch.matmul(encodings, self._embedding.weight).view(shape)
@@ -80,7 +81,7 @@ class VectorQuantizeEMA(nn.Module):
             )
 
             dw = torch.matmul(encodings.t(), flat_z_e)
-            self._ema_w = nn.Parameters(
+            self._ema_w = nn.Parameter(
                 self._ema_w * self._decay + (1 - self._decay) * dw
             )
 
@@ -97,7 +98,8 @@ class VectorQuantizeEMA(nn.Module):
         # Straight Through Loss
         z_q = z_e + (z_q - z_e).detach()
         avg_probs = torch.mean(encodings, dim=0)
-        perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
+        perplexity = torch.exp(-torch.sum(avg_probs *
+                               torch.log(avg_probs + 1e-10)))
 
         # Convert shape back to BCHW
         return loss, z_q.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
@@ -291,6 +293,7 @@ class VQVAE(nn.Module):
     def forward(self, x):
         z = self._encoder(x)  # encode image to latent
         z = self._pre_vq_conv(z)
-        loss, z_q, perplexity, _ = self._vq(z)  # quantize encoding to dicrete space
+        # quantize encoding to dicrete space
+        loss, z_q, perplexity, _ = self._vq(z)
         x_recon = self._decoder(z_q)  # reconstruction of input from decoder
         return loss, x_recon, perplexity
