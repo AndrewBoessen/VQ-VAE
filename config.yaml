@@ -11,4 +11,4 @@ model_config:
     commitment_cost: 0.25
     decay: 0.99
     learning_rate: 2.0e-4
-    pretain_steps: 5000
+    pretrain_steps: 5000

@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import tqdm
+from tqdm import tqdm
 import yaml
 from sklearn.cluster import KMeans
 from torch.utils.data import DataLoader, random_split
@@ -75,7 +75,7 @@ def main():
     # DataLoaders
     training_loader = DataLoader(
         train_data,
-        batch_size=config.architecture.num_hiddens,
+        batch_size=config.batch_size,
         shuffle=True,
         pin_memory=True,
     )
@@ -104,9 +104,11 @@ def main():
     writer = SummaryWriter(log_dir)
 
     # Training Loop
-    for i in tqdm(range(config.num_training_updates)):
-        data = next(iter(train_data))  # current batch of data
-        data = data.to(device)
+    pbar = tqdm(range(config.num_training_updates))
+    for i in pbar:
+        data = next(iter(training_loader))  # current batch of data
+        data = torch.Tensor(data).to(device)
+        # convert from B, H, W, C -> B, C, H, W
         data = data.permute(0, 3, 1, 2).contiguous()
 
         optimizer.zero_grad()
@@ -136,8 +138,8 @@ def main():
             data_recon = model.pretrain(data)
             loss = nn.functional.mse_loss(data_recon, data) / data_variance
             recon_error = loss
-            vq_loss = torch.Tensor(0.0)
-            perplexity = torch.Tensor(0.0)
+            vq_loss = torch.Tensor([0.0])
+            perplexity = torch.Tensor([0.0])
         else:
             vq_loss, data_recon, perplexity = model(data)
             recon_error = nn.functional.mse_loss(
@@ -146,6 +148,8 @@ def main():
 
         loss.backward()
         optimizer.step()
+
+        pbar.set_postfix(loss=loss.item())
 
         # Log to TensorBoard
         writer.add_scalar("Loss/train", loss.item(), i)
