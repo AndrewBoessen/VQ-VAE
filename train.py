@@ -114,19 +114,20 @@ def main():
         if i == config.training.pretrain_steps:
             # K Means Cluster to initialize discrete embeddings
             with torch.no_grad():
-                embeddings = model.encode(train_data)
+                embeddings = model.encode(data)
 
-            embeddings.permute(0, 2, 3, 1).contiguous().reshape(
+            embeddings = embeddings.permute(0, 2, 3, 1).contiguous().reshape(
                 -1, config.architecture.embedding_dim
             )
 
-            np_e = embeddings.cpu().numpy()
+            np_e = embeddings.cpu().detach().numpy()
 
             n_clusters = config.architecture.num_embeddings
             kmeans = KMeans(n_clusters)
             kmeans.fit(np_e)
 
-            cluster_centers = torch.from_numpy(kmeans.cluster_centers_).to(device)
+            cluster_centers = torch.from_numpy(
+                kmeans.cluster_centers_).to(device)
 
             model.set_embeddings(cluster_centers)
 
@@ -134,9 +135,13 @@ def main():
         if i < config.training.pretrain_steps:
             data_recon = model.pretrain(data)
             loss = nn.functional.mse_loss(data_recon, data) / data_variance
+            recon_error = loss
+            vq_loss = torch.Tensor(0.0)
+            perplexity = torch.Tensor(0.0)
         else:
             vq_loss, data_recon, perplexity = model(data)
-            recon_error = nn.functional.mse_loss(data_recon, data) / data_variance
+            recon_error = nn.functional.mse_loss(
+                data_recon, data) / data_variance
             loss = recon_error + vq_loss
 
         loss.backward()
@@ -150,7 +155,8 @@ def main():
 
         # Save model checkpoint every 1000 updates
         if (i + 1) % 1000 == 0:
-            checkpoint_path = os.path.join("checkpoints", f"model_checkpoint_{i+1}.pth")
+            checkpoint_path = os.path.join(
+                "checkpoints", f"model_checkpoint_{i+1}.pth")
             os.makedirs("checkpoints", exist_ok=True)
             torch.save(
                 {
