@@ -35,7 +35,7 @@ class VectorQuantizeEMA(nn.Module):
         # Loss / Training Parameters
         self._commitment_cost = commitment_cost
         self._decay = decay
-        self.epsilon = epsilon
+        self._epsilon = epsilon
 
     def forward(self, z_e):
         # reshape from BCHW -> BHWC
@@ -50,7 +50,7 @@ class VectorQuantizeEMA(nn.Module):
         distances = (
             torch.sum(flat_z_e**2, dim=1, keepdim=True)
             + torch.sum(
-                self._embedding.weight**2,
+                self._embedding.weight**2, dim=1
             )
             - 2 * torch.matmul(flat_z_e, self._embedding.weight.t())
         )
@@ -98,7 +98,8 @@ class VectorQuantizeEMA(nn.Module):
         # Straight Through Loss
         z_q = z_e + (z_q - z_e).detach()
         avg_probs = torch.mean(encodings, dim=0)
-        perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
+        perplexity = torch.exp(-torch.sum(avg_probs *
+                               torch.log(avg_probs + 1e-10)))
 
         # Convert shape back to BCHW
         return loss, z_q.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
