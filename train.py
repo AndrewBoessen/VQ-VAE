@@ -72,7 +72,6 @@ def main():
     print(f"Test Data: {len(test_data)}")
 
     data_variance = np.var(data[train_data.indices])
-    print(data[train_data.indices].shape)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # DataLoaders
