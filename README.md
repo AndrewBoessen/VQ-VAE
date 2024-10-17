@@ -56,7 +56,11 @@ This architecture allows the VQ-VAE to learn a discrete latent representation of
 
 ```bash
 git clone https://github.com/AndrewBoessen/vq-vae.git
-cd VQ-VAE
+cd vq-vae
+
+conda create -n vqvae python=3.12
+conda activate vqvae
+conda install scipy scikit-learn
 pip install -r requirements.txt
 ```
 
@@ -78,6 +82,12 @@ The training process follows these steps:
 1. Pretrain the encoder on the dataset.
 2. Initialize the embedding vectors using K-means clustering on the pretrained encoder's output.
 3. Train the full VQ-VAE model, including the encoder, vector quantizer, and decoder, using the EMA update for the embedding vectors.
+
+
+```
+python train.py
+```
+
 
 ## Results
 
