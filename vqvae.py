@@ -290,7 +290,6 @@ class VQVAE(nn.Module):
         )
 
     def set_embeddings(self, new_embeddings):
-        assert new_embeddings.shape == self._vq._embedding.shape
         with torch.no_grad():
             self._vq._embedding.weight.copy_(new_embeddings)
 

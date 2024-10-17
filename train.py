@@ -6,11 +6,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from tqdm import tqdm
 import yaml
 from sklearn.cluster import KMeans
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 from vqvae import VQVAE
 
@@ -118,8 +118,10 @@ def main():
             with torch.no_grad():
                 embeddings = model.encode(data)
 
-            embeddings = embeddings.permute(0, 2, 3, 1).contiguous().reshape(
-                -1, config.architecture.embedding_dim
+            embeddings = (
+                embeddings.permute(0, 2, 3, 1)
+                .contiguous()
+                .reshape(-1, config.architecture.embedding_dim)
             )
 
             np_e = embeddings.cpu().detach().numpy()
@@ -128,8 +130,7 @@ def main():
             kmeans = KMeans(n_clusters)
             kmeans.fit(np_e)
 
-            cluster_centers = torch.from_numpy(
-                kmeans.cluster_centers_).to(device)
+            cluster_centers = torch.from_numpy(kmeans.cluster_centers_).to(device)
 
             model.set_embeddings(cluster_centers)
 
@@ -142,8 +143,7 @@ def main():
             perplexity = torch.Tensor([0.0])
         else:
             vq_loss, data_recon, perplexity = model(data)
-            recon_error = nn.functional.mse_loss(
-                data_recon, data) / data_variance
+            recon_error = nn.functional.mse_loss(data_recon, data) / data_variance
             loss = recon_error + vq_loss
 
         loss.backward()
@@ -159,8 +159,7 @@ def main():
 
         # Save model checkpoint every 1000 updates
         if (i + 1) % 1000 == 0:
-            checkpoint_path = os.path.join(
-                "checkpoints", f"model_checkpoint_{i+1}.pth")
+            checkpoint_path = os.path.join("checkpoints", f"model_checkpoint_{i+1}.pth")
             os.makedirs("checkpoints", exist_ok=True)
             torch.save(
                 {
@@ -171,7 +170,7 @@ def main():
                 },
                 checkpoint_path,
             )
-            print(f"Checkpoint saved at {checkpoint_path}")
+            pbar.write(f"Checkpoint saved at {checkpoint_path}")
 
     writer.close()
     print("Training completed.")
