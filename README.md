@@ -97,11 +97,6 @@ python train.py
 ![reconstructions](./assets/recon.png)
 
 
-### Embeddings
-
-![embeddings](./assets/embeddings.png)
-
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
