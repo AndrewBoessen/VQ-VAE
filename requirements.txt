@@ -6,3 +6,4 @@ tqdm
 pyyaml
 tensorboard
 scikit-learn
+umap-learn
