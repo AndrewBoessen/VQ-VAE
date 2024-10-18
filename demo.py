@@ -7,21 +7,10 @@ from vqvae import VQVAE
 from train import read_config
 
 
-def load_checkpoint(model, checkpoint_path):
-    checkpoint = torch.load(checkpoint_path)
+def load_checkpoint(model, checkpoint_path, device):
+    checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     return model
-
-
-def generate_samples(model, num_samples=10):
-    model.eval()
-    with torch.no_grad():
-        # Generate random latent vectors
-        latent_vectors = torch.randn(
-            num_samples, model.embedding_dim, 8, 8)  # Adjust size as needed
-        # Decode the latent vectors
-        generated_images = model.decode(latent_vectors)
-    return generated_images.cpu().numpy()
 
 
 def visualize_reconstructions(model, data, num_samples=5):
@@ -66,7 +55,7 @@ def analyze_embeddings_umap(model, data, num_samples=1000):
         embeddings = embeddings.view(num_samples, -1).cpu().numpy()
 
         # Perform UMAP
-        umap_reducer = umap.UMAP(n_neighbors=15, min_dist=0.1,
+        umap_reducer = umap.UMAP(n_neighbors=3, min_dist=0.1,
                                  n_components=2, random_state=42)
         embeddings_2d = umap_reducer.fit_transform(embeddings)
 
@@ -74,7 +63,6 @@ def analyze_embeddings_umap(model, data, num_samples=1000):
         plt.figure(figsize=(10, 8))
         plt.scatter(embeddings_2d[:, 0], embeddings_2d[:, 1], alpha=0.5)
         plt.title('UMAP visualization of VQ-VAE embeddings')
-        plt.colorbar()
         plt.show()
 
 
@@ -102,19 +90,9 @@ def main():
 
     # Load checkpoint
     checkpoint_path = "checkpoints/model_checkpoint_20000.pth"  # Adjust path as needed
-    model = load_checkpoint(model, checkpoint_path)
+    model = load_checkpoint(model, checkpoint_path, device)
 
     print("Model loaded successfully.")
-
-    # Generate and display samples
-    generated_samples = generate_samples(model)
-    plt.figure(figsize=(15, 3))
-    for i in range(5):
-        plt.subplot(1, 5, i+1)
-        plt.imshow(generated_samples[i].transpose(1, 2, 0))
-        plt.axis('off')
-    plt.suptitle("Generated Samples")
-    plt.show()
 
     # Visualize reconstructions
     visualize_reconstructions(model, data)
