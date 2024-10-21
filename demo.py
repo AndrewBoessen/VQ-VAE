@@ -8,12 +8,26 @@ from train import read_config
 
 
 def load_checkpoint(model, checkpoint_path, device):
+    """
+    Load model paramters from checkpoint
+
+    :param model nn.Module: model to load parameters for
+    :param checkpoint_path str: file path to checkpoint
+    :param device str: device to load model to
+    """
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     return model
 
 
 def visualize_reconstructions(model, data, num_samples=5):
+    """
+    Generate image reconstructions with vq-vae decoder network
+
+    :param model nn.Module: model to use for generating reconstructions
+    :param data numpy.ndarray: image to resonstruct with network
+    :param num_samples number: number of samples in data
+    """
     model.eval()
     with torch.no_grad():
         # Select random samples
@@ -42,6 +56,13 @@ def visualize_reconstructions(model, data, num_samples=5):
 
 
 def analyze_embeddings_umap(model, data, num_samples=1000):
+    """
+    UMAP analysis for discrete embeddings
+
+    :param model nn.Module: model embeddings to vizualize
+    :param data numpy.ndarray: data to use for sampling mebeddings
+    :param num_samples number: number of samples in data
+    """
     model.eval()
     with torch.no_grad():
         # Select random samples

@@ -1,9 +1,6 @@
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import DataLoader, random_split
 
 
 class VectorQuantizeEMA(nn.Module):
@@ -14,6 +11,15 @@ class VectorQuantizeEMA(nn.Module):
     def __init__(
         self, n_embeddings, embedding_dim, commitment_cost, decay, epsilon=1e-5
     ):
+        """
+        initialize VQ class
+
+        :param n_embeddings number: number of discrete embeddings
+        :param embedding_dim number: dimension of embeddings
+        :param commitment_cost number: commitment cost weight
+        :param decay number: decay rate for EMA
+        :param epsilon number: epsilon value for EMA
+        """
         super(VectorQuantizeEMA, self).__init__()
 
         self._embedding_dim = embedding_dim  # Dimension of an embedding vector, D
@@ -38,6 +44,11 @@ class VectorQuantizeEMA(nn.Module):
         self._epsilon = epsilon
 
     def forward(self, z_e):
+        """
+        Quantize embeddings
+
+        :param z_e numpy.ndarray: Embeddings from encoder to quantize
+        """
         # reshape from BCHW -> BHWC
         z_e = z_e.permute(0, 2, 3, 1).contiguous()
         shape = z_e.shape
@@ -111,6 +122,13 @@ class Residual(nn.Module):
     """
 
     def __init__(self, in_channels, num_hiddens, num_residual_hiddens):
+        """
+        initialize residual CNN layer
+
+        :param in_channels number: Number of input channels
+        :param num_hiddens number: Number of hidden channels
+        :param num_residual_hiddens number: Number of residual hiddens
+        """
         super(Residual, self).__init__()
         self._block = nn.Sequential(
             nn.ReLU(True),
@@ -135,6 +153,11 @@ class Residual(nn.Module):
         )
 
     def forward(self, x):
+        """
+        Residual layer
+
+        :param x numpy.ndarray: Input image
+        """
         return x + self._block(x)  # residual output
 
 
@@ -146,6 +169,14 @@ class ResidualStack(nn.Module):
     def __init__(
         self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens
     ):
+        """
+        initialize residual stack
+
+        :param in_channels number: Number of input channels
+        :param num_hiddens number: Number of hidden channels
+        :param num_residual_layers number: Number of residual layers in stack
+        :param num_residual_hiddens number: Number of hidden residual channels
+        """
         super(ResidualStack, self).__init__()
         self._num_residual_layers = num_residual_layers
         self._layers = nn.ModuleList(
@@ -156,6 +187,11 @@ class ResidualStack(nn.Module):
         )
 
     def forward(self, x):
+        """
+        Apply residual stack
+
+        :param x numpy.ndarray: Input image
+        """
         # Apply all residual layers in stack
         for i in range(self._num_residual_layers):
             x = self._layers[i](x)
