@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -40,7 +39,7 @@ def visualize_reconstructions(model, data, num_samples=5):
         _, reconstructions, _ = model(samples)
 
         # Visualize original and reconstructed images
-        fig, axes = plt.subplots(2, num_samples, figsize=(15, 6))
+        _, axes = plt.subplots(2, num_samples, figsize=(15, 6))
         for i in range(num_samples):
             axes[0, i].imshow(samples[i].permute(1, 2, 0).cpu().numpy())
             axes[0, i].axis('off')
