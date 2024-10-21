@@ -206,6 +206,14 @@ class Encoder(nn.Module):
     def __init__(
         self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens
     ):
+        """
+        initialize encoder network
+
+        :param in_channels number: Number of input channels
+        :param num_hiddens number: Number of hidden channels
+        :param num_residual_layers number: Number of layers in residual stack
+        :param num_residual_hiddens number: Number of channels in residual hidden layer
+        """
         super(Encoder, self).__init__()
 
         self._conv1 = nn.Conv2d(
@@ -240,6 +248,11 @@ class Encoder(nn.Module):
         )
 
     def forward(self, inputs):
+        """
+        Encode image
+
+        :param inputs numpy.ndarray: images to encode
+        """
         x = self._conv1(inputs)
         x = F.relu(x)
         x = self._conv2(x)
@@ -256,6 +269,14 @@ class Decoder(nn.Module):
     def __init__(
         self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens
     ):
+        """
+        Decoder network
+
+        :param in_channels number: Number of input channels
+        :param num_hiddens number: Number of hidden channels
+        :param num_residual_layers number: Number of residual layers in stack
+        :param num_residual_hiddens number: Number of channles in residual
+        """
         super(Decoder, self).__init__()
 
         self._conv1 = nn.Conv2d(
@@ -287,6 +308,11 @@ class Decoder(nn.Module):
         )
 
     def forward(self, inputs):
+        """
+        Decode latent embeddings
+
+        :param inputs number: latent embeddings
+        """
         x = self._conv1(inputs)
         x = self._residual_stack(x)
         x = self._conv_trans_1(x)
@@ -310,6 +336,17 @@ class VQVAE(nn.Module):
         commitment_cost,
         decay,
     ):
+        """
+        Initialize VQ-VAE encoder decoder network
+
+        :param num_hiddens number: Number of hidden layers
+        :param num_residual_layers number: Number of residual stacks
+        :param num_residual_hiddens number: Number of channels in hidden layer
+        :param num_embeddings number: Number of discrete embeddings
+        :param embedding_dim number: Dimension of discrete embeddings
+        :param commitment_cost number: Weight for commitment const in loss
+        :param decay number: Decay parameter in EMA
+        """
         super(VQVAE, self).__init__()
 
         self._encoder = Encoder(
@@ -327,21 +364,41 @@ class VQVAE(nn.Module):
         )
 
     def set_embeddings(self, new_embeddings):
+        """
+        Set discrete embeddings codebook params
+
+        :param new_embeddings numpy.ndarray: Embedding codebook
+        """
         with torch.no_grad():
             self._vq._embedding.weight.copy_(new_embeddings)
 
     def encode(self, x):
+        """
+        Encode image
+
+        :param x numpy.ndarray: Input image
+        """
         z = self._encoder(x)
         z_e = self._pre_vq_conv(z)
         return z_e
 
     def pretrain(self, x):
+        """
+        Bypass vector quantize step for pretraining
+
+        :param x numpy.ndarray: Input image
+        """
         z = self._encoder(x)
         z = self._pre_vq_conv(z)
         x_recon = self._decoder(z)
         return x_recon
 
     def forward(self, x):
+        """
+        Encode and reconstruct image
+
+        :param x numpy.ndarray: Input image
+        """
         z = self._encoder(x)  # encode image to latent
         z = self._pre_vq_conv(z)
         # quantize encoding to dicrete space
