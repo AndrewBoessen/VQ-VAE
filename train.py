@@ -4,14 +4,14 @@ from types import SimpleNamespace
 
 import numpy as np
 import torch
-from torch import nn
-from torch import optim
 import yaml
 from sklearn.cluster import KMeans
+from torch import nn, optim
 from torch.utils.data import DataLoader, random_split
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
+from gameplay_dataset_reader import GameFrameDataset
 from vqvae import VQVAE
 
 
@@ -58,27 +58,24 @@ def main():
     else:
         print("Failed to read the configuration file.")
 
-    data_path = "skiing_observations.npy"
+    data_path = "gameplay_data/train/"
+    val_path = "gameplay_data/val/"
 
-    data = np.load(data_path)
-    data = data.astype(np.float32) / 255.0  # convert data to float and norm
-
-    print("\n--- Loading Data ---")
-    print(f"Loaded Data: {data.shape[0]}")
-
-    train_data, test_data = random_split(data, [0.8, 0.2])
+    train_data = GameFrameDataset(data_path, preload_shards=True)
+    test_data = GameFrameDataset(val_path)
 
     print(f"Train Data: {len(train_data)}")
     print(f"Test Data: {len(test_data)}")
 
-    data_variance = np.var(data[train_data.indices])
+    data_variance = 0.0104
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
     # DataLoaders
     training_loader = DataLoader(
         train_data,
         batch_size=config.batch_size,
-        shuffle=True,
+        shuffle=False,
         pin_memory=True,
     )
 
@@ -106,10 +103,9 @@ def main():
     # Training Loop
     pbar = tqdm(range(config.num_training_updates))
     for i in pbar:
-        data = next(iter(training_loader))  # current batch of data
-        data = torch.Tensor(data).to(device)
-        # convert from B, H, W, C -> B, C, H, W
-        data = data.permute(0, 3, 1, 2).contiguous()
+        batch = next(iter(training_loader))  # current batch of data
+        data = batch["image"]
+        data = data.to(device)
 
         optimizer.zero_grad()
 
@@ -130,8 +126,7 @@ def main():
             kmeans = KMeans(n_clusters)
             kmeans.fit(np_e)
 
-            cluster_centers = torch.from_numpy(
-                kmeans.cluster_centers_).to(device)
+            cluster_centers = torch.from_numpy(kmeans.cluster_centers_).to(device)
 
             model.set_embeddings(cluster_centers)
 
@@ -144,8 +139,7 @@ def main():
             perplexity = torch.Tensor([0.0])
         else:
             vq_loss, data_recon, perplexity = model(data)
-            recon_error = nn.functional.mse_loss(
-                data_recon, data) / data_variance
+            recon_error = nn.functional.mse_loss(data_recon, data) / data_variance
             loss = recon_error + vq_loss
 
         loss.backward()
@@ -161,8 +155,7 @@ def main():
 
         # Save model checkpoint every 1000 updates
         if (i + 1) % 1000 == 0:
-            checkpoint_path = os.path.join(
-                "checkpoints", f"model_checkpoint_{i+1}.pth")
+            checkpoint_path = os.path.join("checkpoints", f"model_checkpoint_{i+1}.pth")
             os.makedirs("checkpoints", exist_ok=True)
             torch.save(
                 {

@@ -60,9 +60,7 @@ class VectorQuantizeEMA(nn.Module):
         # ||z_e||^2 + ||e||^2 - 2 * z_q
         distances = (
             torch.sum(flat_z_e**2, dim=1, keepdim=True)
-            + torch.sum(
-                self._embedding.weight**2, dim=1
-            )
+            + torch.sum(self._embedding.weight**2, dim=1)
             - 2 * torch.matmul(flat_z_e, self._embedding.weight.t())
         )
 
@@ -109,8 +107,7 @@ class VectorQuantizeEMA(nn.Module):
         # Straight Through Loss
         z_q = z_e + (z_q - z_e).detach()
         avg_probs = torch.mean(encodings, dim=0)
-        perplexity = torch.exp(-torch.sum(avg_probs *
-                               torch.log(avg_probs + 1e-10)))
+        perplexity = torch.exp(-torch.sum(avg_probs * torch.log(avg_probs + 1e-10)))
 
         # Convert shape back to BCHW
         return loss, z_q.permute(0, 3, 1, 2).contiguous(), perplexity, encodings
@@ -200,44 +197,49 @@ class ResidualStack(nn.Module):
 
 class Encoder(nn.Module):
     """
-    Convolutional Encoder
+    Convolutional Encoder producing a 16x16 grid from 256x256 input
     """
 
     def __init__(
         self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens
     ):
         """
-        initialize encoder network
-
-        :param in_channels number: Number of input channels
-        :param num_hiddens number: Number of hidden channels
-        :param num_residual_layers number: Number of layers in residual stack
-        :param num_residual_hiddens number: Number of channels in residual hidden layer
+        Initialize encoder network
+        :param in_channels: Number of input channels
+        :param num_hiddens: Number of hidden channels
+        :param num_residual_layers: Number of layers in residual stack
+        :param num_residual_hiddens: Number of channels in residual hidden layer
         """
         super(Encoder, self).__init__()
 
+        # Modify convolution layers to achieve 16x16 output from 256x256 input
         self._conv1 = nn.Conv2d(
             in_channels=in_channels,
             out_channels=num_hiddens // 2,
             kernel_size=4,
             stride=2,
-            padding=1,
+            padding=1,  # 256 -> 128
         )
-
         self._conv2 = nn.Conv2d(
             in_channels=num_hiddens // 2,
             out_channels=num_hiddens,
             kernel_size=4,
             stride=2,
-            padding=1,
+            padding=1,  # 128 -> 64
         )
-
         self._conv3 = nn.Conv2d(
             in_channels=num_hiddens,
             out_channels=num_hiddens,
-            kernel_size=3,
-            stride=1,
-            padding=1,
+            kernel_size=4,
+            stride=2,
+            padding=1,  # 64 -> 32
+        )
+        self._conv4 = nn.Conv2d(
+            in_channels=num_hiddens,
+            out_channels=num_hiddens,
+            kernel_size=4,
+            stride=2,
+            padding=1,  # 32 -> 16
         )
 
         self._residual_stack = ResidualStack(
@@ -250,32 +252,33 @@ class Encoder(nn.Module):
     def forward(self, inputs):
         """
         Encode image
-
-        :param inputs numpy.ndarray: images to encode
+        :param inputs: images to encode (256x256)
+        :return: latent representation (16x16)
         """
         x = self._conv1(inputs)
         x = F.relu(x)
         x = self._conv2(x)
         x = F.relu(x)
         x = self._conv3(x)
+        x = F.relu(x)
+        x = self._conv4(x)
         return self._residual_stack(x)
 
 
 class Decoder(nn.Module):
     """
-    Convolutional Decoder
+    Convolutional Decoder reconstructing 256x256 from 16x16 input
     """
 
     def __init__(
         self, in_channels, num_hiddens, num_residual_layers, num_residual_hiddens
     ):
         """
-        Decoder network
-
-        :param in_channels number: Number of input channels
-        :param num_hiddens number: Number of hidden channels
-        :param num_residual_layers number: Number of residual layers in stack
-        :param num_residual_hiddens number: Number of channles in residual
+        Initialize decoder network
+        :param in_channels: Number of input channels
+        :param num_hiddens: Number of hidden channels
+        :param num_residual_layers: Number of residual layers in stack
+        :param num_residual_hiddens: Number of channels in residual
         """
         super(Decoder, self).__init__()
 
@@ -292,32 +295,52 @@ class Decoder(nn.Module):
             num_residual_layers=num_residual_layers,
             num_residual_hiddens=num_residual_hiddens,
         )
+
+        # Add upsampling convolution transpose layers to match Encoder
         self._conv_trans_1 = nn.ConvTranspose2d(
             in_channels=num_hiddens,
             out_channels=num_hiddens // 2,
             kernel_size=4,
             stride=2,
-            padding=1,
+            padding=1,  # 16 -> 32
         )
         self._conv_trans_2 = nn.ConvTranspose2d(
             in_channels=num_hiddens // 2,
+            out_channels=num_hiddens // 4,
+            kernel_size=4,
+            stride=2,
+            padding=1,  # 32 -> 64
+        )
+        self._conv_trans_3 = nn.ConvTranspose2d(
+            in_channels=num_hiddens // 4,
+            out_channels=num_hiddens // 8,
+            kernel_size=4,
+            stride=2,
+            padding=1,  # 64 -> 128
+        )
+        self._conv_trans_4 = nn.ConvTranspose2d(
+            in_channels=num_hiddens // 8,
             out_channels=3,
             kernel_size=4,
             stride=2,
-            padding=1,
+            padding=1,  # 128 -> 256
         )
 
     def forward(self, inputs):
         """
         Decode latent embeddings
-
-        :param inputs number: latent embeddings
+        :param inputs: latent embeddings (16x16)
+        :return: reconstructed image (256x256)
         """
         x = self._conv1(inputs)
         x = self._residual_stack(x)
         x = self._conv_trans_1(x)
         x = F.relu(x)
-        return self._conv_trans_2(x)
+        x = self._conv_trans_2(x)
+        x = F.relu(x)
+        x = self._conv_trans_3(x)
+        x = F.relu(x)
+        return self._conv_trans_4(x)
 
 
 class VQVAE(nn.Module):
