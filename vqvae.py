@@ -197,7 +197,7 @@ class ResidualStack(nn.Module):
 
 class Encoder(nn.Module):
     """
-    Convolutional Encoder producing a 16x16 grid from 256x256 input
+    Convolutional Encoder producing a 32x32 grid from 256x256 input
     """
 
     def __init__(
@@ -212,7 +212,7 @@ class Encoder(nn.Module):
         """
         super(Encoder, self).__init__()
 
-        # Modify convolution layers to achieve 16x16 output from 256x256 input
+        # Modified convolution layers to achieve 32x32 output from 256x256 input
         self._conv1 = nn.Conv2d(
             in_channels=in_channels,
             out_channels=num_hiddens // 2,
@@ -234,13 +234,6 @@ class Encoder(nn.Module):
             stride=2,
             padding=1,  # 64 -> 32
         )
-        self._conv4 = nn.Conv2d(
-            in_channels=num_hiddens,
-            out_channels=num_hiddens,
-            kernel_size=4,
-            stride=2,
-            padding=1,  # 32 -> 16
-        )
 
         self._residual_stack = ResidualStack(
             in_channels=num_hiddens,
@@ -253,21 +246,19 @@ class Encoder(nn.Module):
         """
         Encode image
         :param inputs: images to encode (256x256)
-        :return: latent representation (16x16)
+        :return: latent representation (32x32)
         """
         x = self._conv1(inputs)
         x = F.relu(x)
         x = self._conv2(x)
         x = F.relu(x)
         x = self._conv3(x)
-        x = F.relu(x)
-        x = self._conv4(x)
         return self._residual_stack(x)
 
 
 class Decoder(nn.Module):
     """
-    Convolutional Decoder reconstructing 256x256 from 16x16 input
+    Convolutional Decoder reconstructing 256x256 from 32x32 input
     """
 
     def __init__(
@@ -296,30 +287,23 @@ class Decoder(nn.Module):
             num_residual_hiddens=num_residual_hiddens,
         )
 
-        # Add upsampling convolution transpose layers to match Encoder
+        # Modified upsampling convolution transpose layers
         self._conv_trans_1 = nn.ConvTranspose2d(
             in_channels=num_hiddens,
             out_channels=num_hiddens // 2,
             kernel_size=4,
             stride=2,
-            padding=1,  # 16 -> 32
+            padding=1,  # 32 -> 64
         )
         self._conv_trans_2 = nn.ConvTranspose2d(
             in_channels=num_hiddens // 2,
             out_channels=num_hiddens // 4,
             kernel_size=4,
             stride=2,
-            padding=1,  # 32 -> 64
+            padding=1,  # 64 -> 128
         )
         self._conv_trans_3 = nn.ConvTranspose2d(
             in_channels=num_hiddens // 4,
-            out_channels=num_hiddens // 8,
-            kernel_size=4,
-            stride=2,
-            padding=1,  # 64 -> 128
-        )
-        self._conv_trans_4 = nn.ConvTranspose2d(
-            in_channels=num_hiddens // 8,
             out_channels=3,
             kernel_size=4,
             stride=2,
@@ -329,7 +313,7 @@ class Decoder(nn.Module):
     def forward(self, inputs):
         """
         Decode latent embeddings
-        :param inputs: latent embeddings (16x16)
+        :param inputs: latent embeddings (32x32)
         :return: reconstructed image (256x256)
         """
         x = self._conv1(inputs)
@@ -338,9 +322,7 @@ class Decoder(nn.Module):
         x = F.relu(x)
         x = self._conv_trans_2(x)
         x = F.relu(x)
-        x = self._conv_trans_3(x)
-        x = F.relu(x)
-        return self._conv_trans_4(x)
+        return self._conv_trans_3(x)
 
 
 class VQVAE(nn.Module):

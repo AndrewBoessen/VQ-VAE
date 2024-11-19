@@ -1,14 +1,14 @@
 model_config:
   batch_size: 64
-  num_training_updates: 20000
+  num_training_updates: 50000
   architecture:
     num_hiddens: 128
     num_residual_hiddens: 32
     num_residual_layers: 2
     embedding_dim: 64
-    num_embeddings: 512
+    num_embeddings: 256
   training:
     commitment_cost: 0.25
     decay: 0.99
     learning_rate: 2.0e-4
-    pretrain_steps: 2000
+    pretrain_steps: 4000
