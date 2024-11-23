@@ -259,7 +259,7 @@ class VQVAETrainer:
 
 def main():
     # Load configuration from YAML
-    config = load_config("config.yaml")
+    config = load_config("config_256.yaml")
 
     # Create encoder/decoder config from loaded configuration
     encoder_decoder_config = EncoderDecoderConfig(
@@ -276,9 +276,11 @@ def main():
 
     # Initialize datasets
     train_dataset = GameFrameDataset(
-        shard_dir="gameplay_data/train/", preload_shards=True
+        shard_dir="gameplay_data_256/train/", preload_shards=True
     )
-    val_dataset = GameFrameDataset(shard_dir="gameplay_data/val/", preload_shards=True)
+    val_dataset = GameFrameDataset(
+        shard_dir="gameplay_data_256/val/", preload_shards=True
+    )
 
     # Initialize model components using config values
     encoder = Encoder(config=encoder_decoder_config)
