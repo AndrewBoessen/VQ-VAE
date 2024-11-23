@@ -105,7 +105,7 @@ class VQVAETrainer:
     def setup_logging(self):
         # Create experiment directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.exp_dir = os.path.join("experiments", f"vqvae_{timestamp}")
+        self.exp_dir = os.path.join("checkpoints", f"vqvae_{timestamp}")
         os.makedirs(self.exp_dir, exist_ok=True)
 
         # Setup file logging
