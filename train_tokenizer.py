@@ -177,7 +177,9 @@ class VQVAETrainer:
                 batch = {k: v.to(self.device) for k, v in batch.items()}
 
                 # Forward pass
-                z, z_quantized, reconstructions = self.model(batch["image"])
+                z, z_quantized, reconstructions = self.model(
+                    batch["image"], should_preprocess=True, should_postprocess=True
+                )
                 loss = self.model.compute_loss(batch)
                 total_loss = loss.loss_total
 
@@ -215,7 +217,9 @@ class VQVAETrainer:
             batch = {k: v.to(self.device) for k, v in batch.items()}
 
             # Forward pass
-            z, z_quantized, reconstructions = self.model(batch["image"])
+            z, z_quantized, reconstructions = self.model(
+                batch["image"], should_preprocess=True, should_postprocess=True
+            )
             loss = self.model.compute_loss(batch)
             total_loss = loss.loss_total
 
