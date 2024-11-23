@@ -40,7 +40,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
     # Add training specific parameters
     training_config = {
-        "batch_size": 32,
+        "batch_size": 64,
         "num_workers": 4,
         "learning_rate": 1e-4,
         "min_lr": 1e-6,
@@ -105,7 +105,7 @@ class VQVAETrainer:
     def setup_logging(self):
         # Create experiment directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.exp_dir = os.path.join("checkpoints", f"vqvae_{timestamp}")
+        self.exp_dir = os.path.join("experiments", f"vqvae_{timestamp}")
         os.makedirs(self.exp_dir, exist_ok=True)
 
         # Setup file logging
@@ -177,13 +177,9 @@ class VQVAETrainer:
                 batch = {k: v.to(self.device) for k, v in batch.items()}
 
                 # Forward pass
-                z, z_quantized, reconstructions = self.model(batch["observations"])
+                z, z_quantized, reconstructions = self.model(batch["image"])
                 loss = self.model.compute_loss(batch)
-                total_loss = (
-                    loss.commitment_loss
-                    + loss.reconstruction_loss
-                    + loss.perceptual_loss
-                )
+                total_loss = loss.loss_total
 
                 # Backward pass
                 self.optimizer.zero_grad()
@@ -193,17 +189,17 @@ class VQVAETrainer:
                 # Log metrics
                 metrics = {
                     "total_loss": total_loss.item(),
-                    "commitment_loss": loss.commitment_loss.item(),
-                    "reconstruction_loss": loss.reconstruction_loss.item(),
-                    "perceptual_loss": loss.perceptual_loss.item(),
+                    "commitment_loss": loss.intermediate_losses["commitment_loss"],
+                    "reconstruction_loss": loss.intermediate_losses[
+                        "reconstruction_loss"
+                    ],
+                    "perceptual_loss": loss.intermediate_losses["perceptual_loss"],
                 }
                 epoch_losses.append(total_loss.item())
 
                 if batch_idx % self.config["log_every"] == 0:
                     self.log_metrics(metrics, self.global_step)
-                    self.log_images(
-                        batch["observations"], reconstructions, self.global_step
-                    )
+                    self.log_images(batch["image"], reconstructions, self.global_step)
 
                 pbar.set_postfix(loss=f"{total_loss.item():.4f}")
                 self.global_step += 1
@@ -219,11 +215,9 @@ class VQVAETrainer:
             batch = {k: v.to(self.device) for k, v in batch.items()}
 
             # Forward pass
-            z, z_quantized, reconstructions = self.model(batch["observations"])
+            z, z_quantized, reconstructions = self.model(batch["image"])
             loss = self.model.compute_loss(batch)
-            total_loss = (
-                loss.commitment_loss + loss.reconstruction_loss + loss.perceptual_loss
-            )
+            total_loss = loss.loss_total
 
             val_losses.append(total_loss.item())
 
@@ -232,9 +226,7 @@ class VQVAETrainer:
         self.log_metrics(metrics, self.global_step, prefix="val")
 
         # Log validation reconstructions
-        self.log_images(
-            batch["observations"], reconstructions, self.global_step, prefix="val"
-        )
+        self.log_images(batch["image"], reconstructions, self.global_step, prefix="val")
 
         return avg_loss
 

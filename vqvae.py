@@ -3,16 +3,26 @@ Credits to https://github.com/CompVis/taming-transformers
 """
 
 from dataclasses import dataclass
-from typing import Any, Tuple
+from typing import Any, Dict, Tuple
 
 import torch
 import torch.nn as nn
-from dataset import Batch
 from einops import rearrange
-from utils import LossWithIntermediateLosses
 
-from .blocks import Decoder, Encoder
-from .lpips import LPIPS
+from blocks import Decoder, Encoder
+from lpips import LPIPS
+
+
+class LossWithIntermediateLosses:
+    def __init__(self, **kwargs):
+        self.loss_total = sum(kwargs.values())
+        self.intermediate_losses = {k: v.item() for k, v in kwargs.items()}
+
+    def __truediv__(self, value):
+        for k, v in self.intermediate_losses.items():
+            self.intermediate_losses[k] = v / value
+        self.loss_total = self.loss_total / value
+        return self
 
 
 @dataclass
@@ -55,11 +65,11 @@ class Tokenizer(nn.Module):
         reconstructions = self.decode(decoder_input, should_postprocess)
         return outputs.z, outputs.z_quantized, reconstructions
 
-    def compute_loss(self, batch: Batch, **kwargs: Any) -> LossWithIntermediateLosses:
+    def compute_loss(
+        self, batch: Dict[str, torch.Tensor], **kwargs: Any
+    ) -> LossWithIntermediateLosses:
         assert self.lpips is not None
-        observations = self.preprocess_input(
-            rearrange(batch["observations"], "b t c h w -> (b t) c h w")
-        )
+        observations = self.preprocess_input(batch["image"])
         z, z_quantized, reconstructions = self(
             observations, should_preprocess=False, should_postprocess=False
         )
