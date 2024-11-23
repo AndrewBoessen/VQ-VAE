@@ -155,8 +155,10 @@ def main():
 
         # Save model checkpoint every 1000 updates
         if (i + 1) % 1000 == 0:
-            checkpoint_path = os.path.join("checkpoints", f"model_checkpoint_{i+1}.pth")
-            os.makedirs("checkpoints", exist_ok=True)
+            checkpoint_path = os.path.join(
+                "checkpoints_512", f"model_checkpoint_{i+1}.pth"
+            )
+            os.makedirs("checkpoints_512", exist_ok=True)
             torch.save(
                 {
                     "epoch": i + 1,
@@ -167,6 +169,10 @@ def main():
                 checkpoint_path,
             )
             pbar.write(f"Checkpoint saved at {checkpoint_path}")
+
+        # reinit codes
+        if (i + 1) % config.training.reinit_interval == 0:
+            model._vq.reinit_codes()
 
     writer.close()
     print("Training completed.")
