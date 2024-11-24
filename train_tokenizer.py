@@ -40,7 +40,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
     # Add training specific parameters
     training_config = {
-        "batch_size": 64,
+        "batch_size": 4,
         "num_workers": 4,
         "learning_rate": 1e-4,
         "min_lr": 1e-6,
@@ -276,10 +276,10 @@ def main():
 
     # Initialize datasets
     train_dataset = GameFrameDataset(
-        shard_dir="gameplay_data_256/train/", preload_shards=True
+        shard_dir="gameplay_data_256_no_crop/train/", preload_shards=True
     )
     val_dataset = GameFrameDataset(
-        shard_dir="gameplay_data_256/val/", preload_shards=True
+        shard_dir="gameplay_data_256_no_crop/val/", preload_shards=True
     )
 
     # Initialize model components using config values
