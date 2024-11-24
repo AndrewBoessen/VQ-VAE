@@ -259,7 +259,7 @@ class VQVAETrainer:
 
 def main():
     # Load configuration from YAML
-    config = load_config("config_256.yaml")
+    config = load_config("config_256_attn.yaml")
 
     # Create encoder/decoder config from loaded configuration
     encoder_decoder_config = EncoderDecoderConfig(
