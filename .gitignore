@@ -163,6 +163,3 @@ cython_debug/
 
 *.npy
 /runs
-/gameplay_data
-/checkpoints
-/experiments
