@@ -88,7 +88,7 @@ The training process follows these steps:
 3. Train the full VQ-VAE model, including the encoder, vector quantizer, and decoder, using the EMA update for the embedding vectors.
 
 ```
-python train.py
+python train_tokenizer.py
 ```
 
 ## Results
