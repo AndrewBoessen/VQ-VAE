@@ -1,5 +1,7 @@
 # VQ-VAE
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AndrewBoessen/CSCI3387_Notebooks/blob/main/CNN_Based_VAE.ipynb)
+
 This repository contains a PyTorch implementation of the Vector Quantized Variational Autoencoder (VQ-VAE) network.
 
 ![vq-vae network](./assets/vq-vae.png)
@@ -72,6 +74,14 @@ pip install -r requirements.txt
 ```
 
 ## Usage
+
+Run demo to reconstruct image and plot codebook embeddings
+
+```
+python demo.py
+```
+
+Or use [Colab demo](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AndrewBoessen/CSCI3387_Notebooks/blob/main/CNN_Based_VAE.ipynb)
 
 ## Training
 
