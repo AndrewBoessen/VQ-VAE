@@ -7,7 +7,3 @@ pyyaml
 tensorboard
 scikit-learn
 umap-learn
-omegaconf
-dataset
-einops
-requests
