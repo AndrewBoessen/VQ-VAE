@@ -79,7 +79,7 @@ Run demo to reconstruct image and plot codebook embeddings
 python demo.py
 ```
 
-Or use [Colab demo](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/AndrewBoessen/CSCI3387_Notebooks/blob/main/CNN_Based_VAE.ipynb)
+Or use [Colab demo](https://colab.research.google.com/github/AndrewBoessen/CSCI3387_Notebooks/blob/main/CNN_Based_VAE.ipynb)
 
 ## Training
 
