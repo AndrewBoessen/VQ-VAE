@@ -2,13 +2,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import umap.umap_ as umap
+from torch import nn
 
 from gameplay_dataset_reader import GameFrameDataset
 from train import read_config
 from vqvae import VQVAE
 
 
-def load_checkpoint(model, checkpoint_path, device):
+def load_checkpoint(model: nn.Module, checkpoint_path: str, device: torch.device):
     """
     Load model paramters from checkpoint
 
@@ -21,7 +22,7 @@ def load_checkpoint(model, checkpoint_path, device):
     return model
 
 
-def visualize_reconstructions(model, data, num_samples=5):
+def visualize_reconstructions(model: nn.Module, data: np.ndarray, num_samples: int = 5):
     """
     Generate image reconstructions with vq-vae decoder network
 
@@ -60,7 +61,9 @@ def visualize_reconstructions(model, data, num_samples=5):
         plt.show()
 
 
-def analyze_embeddings_umap(model, data, num_samples=1000):
+def analyze_embeddings_umap(
+    model: nn.Module, data: np.ndarray, num_samples: int = 1000
+):
     """
     UMAP analysis for discrete embeddings
 
