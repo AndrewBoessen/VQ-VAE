@@ -1,20 +1,14 @@
-_target_: models.tokenizer.Tokenizer
-
-vocab_size: 512
-embed_dim: 512
-encoder:
-  _target_: models.tokenizer.Encoder
-  config:
-    _target_: models.tokenizer.EncoderDecoderConfig
-    resolution: 64
-    in_channels: 3
-    z_channels: 512
-    ch: 64
-    ch_mult: [1, 1, 1, 1, 1]
-    num_res_blocks: 2
-    attn_resolutions: [8, 16]
-    out_ch: 3
-    dropout: 0.0
-decoder:
-  _target_: models.tokenizer.Decoder
-  config: ${..encoder.config}
+model_config:
+  batch_size: 32
+  num_training_updates: 100000
+  architecture:
+    num_hiddens: 128
+    num_residual_hiddens: 32
+    num_residual_layers: 2
+    embedding_dim: 12
+    num_embeddings: 128
+  training:
+    commitment_cost: 0.25
+    decay: 0.99
+    learning_rate: 2.0e-4
+    pretrain_steps: 4000
