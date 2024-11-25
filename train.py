@@ -2,12 +2,11 @@ import os
 from datetime import datetime
 from types import SimpleNamespace
 
-import numpy as np
 import torch
 import yaml
 from sklearn.cluster import KMeans
 from torch import nn, optim
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
