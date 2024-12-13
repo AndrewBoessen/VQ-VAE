@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import umap.umap_ as umap
+from tqdm import tqdm
 
 from gameplay_dataset_reader import GameFrameDataset
 from train_tokenizer import EncoderDecoderConfig, load_config
@@ -80,7 +81,7 @@ def analyze_embeddings_umap(model, data, num_samples=1000, batch_size=32):
         all_embeddings = []
 
         # Process in batches
-        for start_idx in range(0, num_samples, batch_size):
+        for start_idx in tqdm(range(0, num_samples, batch_size)):
             end_idx = min(start_idx + batch_size, num_samples)
             batch_indices = indices[start_idx:end_idx]
             samples = torch.stack([data[i]["image"] for i in batch_indices]).to(
