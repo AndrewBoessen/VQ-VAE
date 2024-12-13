@@ -118,7 +118,7 @@ def main():
     ).to(device)
 
     # Load checkpoint
-    checkpoint_path = "checkpoints/model_checkpoint_100000.pth"  # Adjust path as needed
+    checkpoint_path = "checkpoints/model_checkpoint_3.pth"  # Adjust path as needed
     model = load_checkpoint(model, checkpoint_path, device)
 
     print("Model loaded successfully.")
