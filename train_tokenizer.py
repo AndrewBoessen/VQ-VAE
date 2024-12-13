@@ -40,7 +40,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
     # Add training specific parameters
     training_config = {
-        "batch_size": 4,
+        "batch_size": 1,
         "num_workers": 4,
         "learning_rate": 1e-4,
         "min_lr": 1e-6,
