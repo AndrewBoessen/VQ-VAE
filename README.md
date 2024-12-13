@@ -48,6 +48,8 @@ Key features and components:
 
 - **Reconstruction Loss**: Measures the difference between the input and the reconstructed output, typically using Mean Squared Error (MSE) for images or cross-entropy for discrete data.
 
+- **Perceptual Loss**: Measures the perceptual similarity between reconstructions and ground truth. This uses LPIPS to evaluate image reconstructions.
+
 - **Total Loss**: The sum of the reconstruction loss and the commitment loss.
 
 The forward pass through the network proceeds as follows:
