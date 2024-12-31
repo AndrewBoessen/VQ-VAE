@@ -111,6 +111,14 @@ python train.py
 
 ![embeddings](./assets/embeddings.png)
 
+### Applications
+
+For a cool application of this model check out [neural game engine](https://github.com/AndrewBoessen/neural-game-engine), a neural network approach for modeling interactive game environments using Vector Quantized Variational Auto-Encoder (VQ-VAE) and Spatio-Temporal Transformers. Trained on Atari Skiing gameplay data.
+
+| ![SkiingGIF](./assets/original.gif) | ![Generated](./assets/game.gif) |
+| :---------------------------------: | :-----------------------------: |
+|              Original               |          AI Generated           |
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
